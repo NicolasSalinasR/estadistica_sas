@@ -1,0 +1,70 @@
+---
+title: "trabajo 4 estadistica"
+output: html_document
+date: "2024-04-18"
+---
+## contexto: Un equipo de investigadores del área de interacción humano-información está estudiando si el área temática y el nivel de dificultad del problema de información influyen en el tiempo (en segundos) que toma un usuario en formular una consulta de búsqueda para resolver dicho problema. Para ello, han reclutado a un grupo de participantes voluntarios, asignados aleatoriamente a distintos grupos. Cada participante debe resolver tres problemas de información con diferentes niveles de dificultad: baja, media y alta. A su vez, cada grupo debe resolver problemas relacionados a una temática diferente.
+
+### enunciado del trabajo: En este momento, los investigadores buscan determinar si existen diferencias en el tiempo que tardan los usuarios en formular consultas para problemas con diferente nivel de dificultad en el área de química.
+
+Para responder esta pregunta, primero se debe obtener los datos y filtrarlos para obtener solo los que son de interes para la pregunta planteada
+
+```{r}
+library(ggpubr)
+library(ez)
+library(tidyverse)
+ 
+# leer los datos del archivo
+datos <- read.csv("EP06 Datos.csv", stringsAsFactors = TRUE)
+
+#filtrar los datos para obtener los que son de interes
+
+datos_filtrados <- datos %>%
+  filter(datos$area == "Química")
+
+```
+
+
+ahora que poseemos los datos se procedera a comprobar si las condiciones se cumplen a cabalidad.
+
+#### condicion 1: la escala con la que se mide la variable dependiente posee propiedades de una escala de intervalos iguales
+
+en esta ocacion la variable dependiente es el tiempo y el tiempo como tal cumple con las propiedades de una escala de intervalos iguales, por lo que esta primera condicion se cumple
+
+#### condicion 2: las mediciones son independientes al interior de cada grupo
+
+esta condicion se cumple tambien debido al contexto del estudio, el cual como se indica los voluntarios fueron asignados aleatoriamente a cada grupo.
+
+#### condicion 3: se puede suponer que la poblacion de origen sigue razonablemente una poblacion normal
+
+para comprobar la condicion anterior, se realizara un grafico Q-Q para revisar si se sigue una distribucion normal
+
+```{r}
+g<- ggqqplot(datos_filtrados, x = "tiempo", y = "difucultad", color = "dificultad")
+print(g)
+
+```
+como se puede apreciar, pese a que existen algunos valores anomalos, las muestras siguen razonablemente una distribucion normal.
+
+
+#### condicion 4: la matriz de varianzas y covarianzas es esferica
+esta condicion se verificara despues de aplicar la prueba, pues esta misma nos indica si los datos cumplen esta condicion o no.
+
+
+una vez vistas las condiciones se deben decidir las hipotesis de este estudio.
+
+Hipotesis nula: el tiempo que se tarda en realizar las consultas es el mismo para todas las dificultades
+Hipotesis alternativa: el tiempo que se tarda en realizar las consultas es diferente para las dificultades.
+
+```{r}
+prueba2 <- ezANOVA(data = datos_filtrados, dv = tiempo, within  = dificultad, wid = id, return_aov = TRUE)
+print(summary(prueba2$aov))
+
+
+print(prueba2$`Mauchly's Test for Sphericity`)
+
+#print(prueba2$`Sphericity Corrections`)
+```
+
+
+
