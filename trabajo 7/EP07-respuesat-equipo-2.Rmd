@@ -175,7 +175,7 @@ en este caso tambien se cumple pues la variable dependiente es el tiempo y este 
 3.- "las observaciones son una muestra aleatoria e independiente de la poblacion"
 en este caso como se hizo una muestra aleatoria esto se cumple
 
-como se acaba de decir se cumplen todas las condiciones para utilizar la prueba de friedman, se procedera a utilziar dicha prueba con las siguientes hipotesis
+como se acaba de decir se cumplen todas las condiciones para utilizar la prueba de friedman, se procedera a utilizar dicha prueba con las siguientes hipotesis
 
 Hipotesis nula: las muestras poseen el mismo rendimiento
 Hipotesis alternativa: las muestras no poseen el mismo rendimiento
@@ -183,7 +183,30 @@ Hipotesis alternativa: las muestras no poseen el mismo rendimiento
 para esto se utiliara un nivel de significancia del 0.1
 
 ```{r}
+dependiente <- c(mejora_pregunta4, mejorb_pregunta4, mejorc_pregunta4)
 
+independiente <- c(rep("mejor.A", length(mejora_pregunta4)),
+                   rep("mejor.B", length(mejorb_pregunta4)),
+                    rep("mejor.C", length(mejorc_pregunta4)))
+
+independiente <- factor(independiente)
+
+sujeto <- rep(1:22, 3)
+
+datos <- data.frame(sujeto, dependiente, independiente)
+
+alfa <- 0.1
+
+prueba_friedman <- friedman.test(dependiente ~ independiente | sujeto, data = datos)
+
+print(prueba_friedman)
 ```
+el resultado de esta prueba es de un p-value =0.002287, dicho valor es menor a la significancia elegida, por lo tanto con un 90% de confiabilidad se rechaza la hipotesis nula a favor de la alternativa, por lo tanto existen diferencias entre el rendimiento de los algoritmos, para saber entre cuales algoritmos hay diferencias se aplicara una prueba post-hoc
 
+```{r}
+post_hoc <- pairwise.wilcox.test(datos$dependiente, datos$independiente, p.adjust.method = "holm", paired = TRUE)
+
+post_hoc
+```
+como se puede ver con esta prueba post-hoc todos los valores presentan diferencias significativas, entre si, esto tomando un 0.1 de nivel de significancia por lo tanto se puede afirmar con un 90% de confiabilidad que existen diferencias entre todos los rendimientos de los algoritmos.
 
