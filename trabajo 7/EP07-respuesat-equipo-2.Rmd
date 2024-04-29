@@ -19,6 +19,55 @@ datos <- read.csv("EP07 Datos.csv", stringsAsFactors = TRUE)
 
 ##### 1.- Observando los datos, la memorista sospecha que hay diferencias significativas en el tiempo de ejecución entre las versiones A y B del algoritmo cuando las instancias tienen 70 o más nodos. ¿Los datos respaldan la intuición de la memorista? Para responder, filtren los datos para tener las instancias con 70 o más nodos y seleccionen las columnas de los tiempos de ejecución de las versiones A y B en formato ancho. Usando como semilla el valor 13, obtenga muestras aleatorias independientes de 20 tiempos registrados por la versión A y 18 tiempos registrados por la versión B del algoritmo. Realicen un análisis estadístico pertinente (enunciar hipótesis, revisar condiciones, seleccionar prueba) para responder la pregunta planteada, utilizando pruebas no paramétricas de ser necesario.
 
+Primero filtramos los datos como se solicita para obtener solo las instancias con 70 o mas nodos y se utilizara la semilla 13 para obtener una muestra aleatoria de 20 instancias para tiempo A y 18 instancias para tiempo B
+```{r}
+set.seed(13)
+
+datos_pregunta_1 <- subset(datos, n.nodos >= 70)
+
+datos_A <- datos_pregunta_1$tiempo.A
+datos_A <- datos_A[sample(length(datos_A),20)]
+
+datos_B <- datos_pregunta_1$tiempo.B
+datos_B <- datos_B[sample(length(datos_B), 18)]
+```
+
+Como los datos son pareados se utilizara la prueba de T students para datos pareados, por lo mismo se revisara si los datos cumplen con las condiciones, dichas condiciones son:
+
+1.- "Las observaciones son independientes entre si"
+ Esto se puede ver ya que la muestra fue elegida de forma aleatoria, por lo que se puede asumir que las observaciones si son independientes entre si
+ 
+2.- "Las observaciones provienen de una poblacion que sigue una distribucion normal"
+
+Para comprobar esto se utilizara la prueba de Shapiro y de esta forma se comprobara si las observaciones provienen de una distribucion normal
+```{r}
+normalidad_datos_A <- shapiro.test(datos_A)
+normalidad_datos_A
+
+normalidad_datos_B <- shapiro.test(datos_B)
+normalidad_datos_B
+```
+Debido a que el valor p de los datos es menor a cualquier nivel de significancia usual, podemos decir que los datos A no siguen una distribución normal, por lo tanto, no podemos una prueba parametrica. Por lo que ocuparemos la prueba de suma de rangos de Wilcoxon, entonces revisaremos las condiciones:
+
+1.- "Las observaciones son independientes entre si"
+ Esto se puede ver ya que la muestra fue elegida de forma aleatoria, por lo que se puede asumir que las observaciones si son independientes entre si.
+ 
+ 2.- "La escala de medición empleada debe ser a o menos ordinal"
+  Esto se cumple, ya que, el tiempo puede ordenarse.
+  
+Por lo que podemos aplicar la prueba de suma de rangos de Wilcoxon.
+
+```{r}
+alpha = 0.05
+valor_nulo = 0
+wilcoxon <- wilcox.test(datos_A, 
+                        datos_B, 
+                        paired = FALSE, 
+                        alternative = "two.sided", 
+                        conf.level = alpha)
+wilcoxon
+```
+
 
 ##### 2.- La memorista también sospecha que, al comparar las mismas instancias de prueba con iguales características, las mejores soluciones encontradas por las versiones B y C tienen rendimientos distintos. ¿Estará en lo cierto? Para responder, filtren los datos para tener las instancias con 70 o más nodos y seleccionen las columnas con el mejor rendimiento de las versiones B y C en formato ancho. Usando como semilla el valor 73, obtengan una muestra aleatoria de 24 instancias. Realicen un análisis estadístico pertinente (enunciar hipótesis, revisar condiciones, seleccionar prueba) para responder la pregunta planteada, utilizando pruebas no paramétricas de ser necesario.
 
@@ -108,6 +157,22 @@ como se puede observar en este caso el p-value tambien es mayor al nivel de sign
 
 
 ##### 3.- La memorista sospecha que hay diferencias significativas en el tiempo de ejecución entre las versiones del algoritmo cuando las instancias de prueba tienen 50 o más nodos. ¿Los datos respaldan la intuición de la memorista? Para responder, filtren los datos para tener las instancias con 50 o más nodos y seleccionen las columnas con los tiempos de ejecución registrados (en formato ancho). Usando como semilla el valor 43, obtengan muestras aleatorias independientes de 12, 14 y 13 tiempos registrados por las versiones A, B y C, respectivamente. Realicen un análisis estadístico pertinente (enunciar hipótesis, revisar condiciones, seleccionar prueba) para responder la pregunta planteada, utilizando pruebas no paramétricas de ser necesario
+
+Primero filtramos los datos como se solicita para obtener solo las instancias con 50 o mas nodos y se utilizara la semilla 43 para obtener una muestra aleatoria de 12 instancias para tiempo A, 14 instancias para tiempo B y 13 instancias para tiempo C
+```{r}
+set.seed(43)
+
+datos_pregunta_3 <- subset(datos, n.nodos >= 50)
+
+datos_A <- datos_pregunta_3$tiempo.A
+datos_A <- datos_A[sample(length(datos_A),12)]
+
+datos_B <- datos_pregunta_3$tiempo.B
+datos_B <- datos_B[sample(length(datos_B), 14)]
+
+datos_C <- datos_pregunta_3$tiempo.C
+datos_C <- datos_C[sample(length(datos_C), 13)]
+```
 
 
 ##### 4.- La memorista también sospecha que, al comparar las mismas instancias con iguales características, las mejores soluciones encontradas por las diferentes versiones del algoritmo tienen rendimientos distintos. ¿Estará en lo cierto? Para responder, filtren los datos para tener las instancias con 50 o más nodos y seleccionen las columnas con los mejores rendimientos registrados. Usando como semilla el valor 16, obtengan una muestra aleatoria de 22 instancias. Realicen un análisis estadístico pertinente (enunciar hipótesis, revisar condiciones, seleccionar prueba) para responder la pregunta planteada, utilizando pruebas no paramétricas de ser necesario.
