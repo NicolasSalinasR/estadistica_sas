@@ -1,0 +1,83 @@
+---
+title: "trabajo 8"
+author: "Nicolas salinas"
+date: "2024-05-01"
+output: html_document
+---
+
+utilizando los datos de la encuesta casen se respondera a la pregunta de  "los hombres en la region metropolitana, trabajan la misma cantidad de horas semanales que las mujeres en la region metropolitana".
+
+para responder esta pregunta en primera instancia se filtraran ls datos y se obtendran una muestra de los mismos.
+```{r}
+library(dplyr)
+# abrir el archivo con los datos
+datos <- read.csv2("EP08 Datos CASEN 2017.csv")
+```
+
+```{r}
+#filjar una semilla para obtener la muestra aleatoria
+set.seed(1412)
+
+datos_pregunta1 <- datos %>% 
+  filter(region == "Regi�n Metropolitana de Santiago")
+
+# Eliminar filas con NA en la columna 'o10' de hombres_santiago
+hombres_santiago <- datos_pregunta1 %>% 
+  filter(sexo == "Hombre" & !is.na(o10)) %>%
+  select(sexo, o10)
+
+# Eliminar filas con NA en la columna 'o10' de mujeres_santiago
+mujeres_santiago <- datos_pregunta1 %>% 
+  filter(sexo == "Mujer" & !is.na(o10)) %>%
+  select(sexo, o10)
+
+# Obtener muestra de hombres sin NA en 'o10'
+muestra_hombres <- hombres_santiago %>% 
+  sample_n(125, replace = FALSE)
+
+# Obtener muestra de mujeres sin NA en 'o10'
+muestra_mujeres <- mujeres_santiago %>% 
+  sample_n(125, replace = FALSE)
+
+
+```
+
+ahora para hacer el contraste de hipotesis se utilizara el metodo de monte carlo, para el cual se definiran las siguientes hipotesis:
+
+hipotesis nula = "la cantidad de horas trabajadas por hombres y mujeres es la misma"
+hipotesis alternativa = "la cantidad de horas trabajadas por hombres y mujeres es distinta"
+
+```{r}
+# Función mejorada para simular diferencias de horas bajo la hipótesis nula
+simular_diferencia_horas_mejorada <- function(muestra_hombres, muestra_mujeres) {
+  # Calcular la diferencia de horas observada en las muestras
+  diferencia_observada <- mean(muestra_hombres$o10) - mean(muestra_mujeres$o10)
+  
+  # Realizar simulaciones de Monte Carlo más robustas
+  num_simulaciones <- 10000
+  diferencias_simuladas <- numeric(num_simulaciones)
+  for (i in 1:num_simulaciones) {
+    # Mezclar aleatoriamente las horas de hombres y mujeres
+    horas_mezcladas <- c(muestra_hombres$o10, muestra_mujeres$o10)
+    horas_mezcladas <- sample(horas_mezcladas)
+    
+    # Calcular la diferencia de horas simulada
+    diferencia_simulada <- mean(horas_mezcladas[1:125]) - mean(horas_mezcladas[126:250])
+    diferencias_simuladas[i] <- diferencia_simulada
+  }
+  
+  # Calcular el p-valor
+  p_valor <- mean(abs(diferencias_simuladas) >= abs(diferencia_observada), na.rm = TRUE)
+  
+  return(p_valor)
+}
+
+# Aplicar la función mejorada para simular las diferencias de horas
+p_valor_mejorado <- simular_diferencia_horas_mejorada(muestra_hombres, muestra_mujeres)
+
+# Mostrar el p-valor mejorado
+print(p_valor_mejorado)
+
+```
+
+
