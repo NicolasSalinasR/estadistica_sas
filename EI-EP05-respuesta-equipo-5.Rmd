@@ -1,0 +1,128 @@
+---
+title: "T07/E05"
+author: "Equipo 5"
+date: "2024-04-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Actividad Anova
+Librerias
+```{r}
+#Importamos las librerías
+if (!requireNamespace('dplyr', quietly = TRUE)){
+  install.packages('dplyr')
+}
+if (!requireNamespace('tidyverse', quietly = TRUE)){
+  install.packages('tidyverse')
+}
+if (!requireNamespace('car', quietly = TRUE)){
+  install.packages('car')
+}
+if (!requireNamespace('ggplot2', quietly = TRUE)){
+  install.packages('ggplot2')
+}
+
+if (!requireNamespace('ggpubr', quietly = TRUE)){
+  install.packages('ggpubr')
+}
+
+library(ggpubr)
+
+if (!requireNamespace('ggpattern', quietly = TRUE)){
+  install.packages('ggpattern')
+}
+
+library(ggpattern)
+library(car)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+```
+
+Desarrollo
+```{r cars}
+#¿Existen diferencias en el tiempo de resolución de cubos 3x3x3 entre participantes de Chile, Perú y Uruguay?
+datos = read.csv2("EP05 Datos.csv")
+datos_filtrados <- subset(datos, tipo == "3x3x3" & (pais == "Chile" | pais == "Perú" | pais == "Uruguay"))
+
+#Familiarizarse con los datos entregados, y enunciar las hipótesis nula y alternativa para el procedimiento ANOVA.
+
+#H0 = No hay diferencia entre la media del tiempo de resolucion entre los paises Chile Peru y Uru
+#HN = Hay diferencia entre la media del tiempo de resolucion entre los paises
+
+#Analizar si se cumplen las condiciones para usar un procedimiento ANOVA y agregar código al script R para verificarlo.
+#1. las muestras son aleatorias(enunciado).
+#2. los datos siguen una distribución normal (prueba shapiro)
+#Calculamos la normalidad de los datos de cada pais con shapiro test
+#Filtramos los datos de cada pais
+chile = datos_filtrados%>%
+  filter(pais == 'Chile')
+
+peru = datos_filtrados %>%
+  filter(pais == 'Perú')
+
+uruguay = datos_filtrados %>%
+  filter(pais == 'Uruguay')
+
+#Calculamos la normalidad de los datos de cada pais con shapiro test
+shp_c<- shapiro.test(chile$tiempo)
+shp_c
+
+shp_a<- shapiro.test(peru$tiempo)
+shp_a
+
+shp_p<- shapiro.test(uruguay$tiempo)
+shp_p
+
+
+# Comprobación de normalidad .
+g = ggqqplot (datos_filtrados ,
+                 x = "tiempo" ,
+                 y = "pais" ,
+                 color = "pais")
+
+g <- g + facet_wrap (~ pais )
+g <- g + rremove ("x.ticks") + rremove ("x.text")
+g <- g + rremove ("y.ticks") + rremove ("y.text")
+g <- g + rremove ("axis.title")
+print (g)
+
+
+#Comprobamos ahora la homogeneidad de las varianzas.
+levene = leveneTest(tiempo ~ pais, data = datos_filtrados)
+print(levene)
+
+#Como podemos ver nuestro Test arroja un P-value (0.7713) mucho mayor al nivel de significancia común de 0.05, por lo que se mantiene la hipótesis nula de que los grupos mantienen homogeneidad.
+
+#Aplicar una prueba ANOVA ómnibus a los datos y entregar una conclusión usando un nivel de significación adecuado.
+#anova muestras independientes vd = tiempo, vi = pais
+modelo_anova <- aov(tiempo ~ pais, data = datos_filtrados)
+summary(modelo_anova)
+
+#p < 0.05 se rechaza hipotesis nula, por lo cual se debe aplicar post-hoc y saber
+#que pais o paises generan las diferencias de tiempos entre resolucion.
+
+#Determinar si corresponde o no aplicar un análisis post-hoc, justificando adecuadamente la opción escogida. Independiente del resultado anterior, aplicar un análisis post-hoc pertinente y comentar los resultados obtenidos.
+
+#La pregunta dada es un poco ambigua, no nos dice si quiere solo saber la diferencia global o especificarlas ya que con o sin posthoc se podría responder. Con ANOVA se prueba de que si existen diferencias, pero por rigor de ver si hay alguna contradicción con los resultados, se aplicará post-hoc de igual forma.
+
+#Definimos el mismo alfa que usamos en ANOVA
+alfa <- 0.05
+
+#Se realiza prueba post-hoc a la prueba anova ya hecha
+post_hoc = TukeyHSD(modelo_anova, "pais",ordered = TRUE, conf.level = 1 - alfa)
+post_hoc
+
+#Redactar la respuesta a la pregunta planteada (comentario) en base a los resultados del análisis realizado
+
+
+#Según el análisis de comparaciones múltiples utilizando la prueba de Tukey, se encontraron diferencias significativas en las medias entre los grupos de Uruguay y Chile (diferencia de 0.992 con un intervalo de confianza del 95% entre 0.823 y 1.161), así como entre los grupos de Perú y Chile (diferencia de 1.039 con un intervalo de confianza del 95% entre 0.875 y 1.203). Sin embargo, no se hallaron diferencias significativas entre los grupos de Perú y Uruguay (diferencia de 0.047 con un intervalo de confianza del 95% entre -0.122 y 0.216) y el único con un valor p ajustado que mantiene la hipótesis nula de que no hay diferencias. Estos resultados sugieren que hay variaciones significativas entre unas parejas de países, pero no entre todos los grupos analizados.
+```
+
+
+```
+

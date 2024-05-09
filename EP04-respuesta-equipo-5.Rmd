@@ -1,0 +1,164 @@
+---
+title: "EP04"
+date: "2024-04-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+if (!requireNamespace('dplyr', quietly = TRUE)){
+  install.packages('dplyr')
+}
+
+library(dplyr)
+
+
+if (!requireNamespace('tidyr', quietly = TRUE)){
+  install.packages('tidyr')
+}
+
+library(tidyr)
+```
+
+## EP04 - Tarea
+Pregunta1
+```{r}
+# 1. Un hotel está implementando un nuevo protocolo de limpieza para mejorar la calidad de servicio y la satisfacción de los huéspedes. Para evaluar la efectividad de este protocolo, se seleccionaron aleatoriamente 25 habitaciones y se aplicó el protocolo de limpieza antiguo y nuevo de forma alternada. Después de la primera limpieza, se evaluó la calidad de limpieza de cada habitación. Luego, después de la segunda limpieza con el protocolo alternativo, se volvió a evaluar la calidad de limpieza. Los resultados se presentan a continuación:
+#    4 habitaciones mostraron una calidad de limpieza baja en ambas ocasiones.
+#    5 habitaciones con calidad de limpieza baja con el protocolo antiguo mostraron una mejora con el nuevo.
+#    9 habitaciones mantuvieron una alta calidad de limpieza con ambos protocolos.
+#    7 habitaciones mostraron una alta calidad de limpieza con el protocolo antiguo, pero una disminución con el protocolo nuevo.
+# ¿Hay evidencia de que el nuevo protocolo de limpieza haya tenido un efecto significativo en la calidad de limpieza de las habitaciones del hotel?
+
+#Mcnemar
+
+#Para este problema usamos la prueba de Mcnemar ya que tenemos una variable pareada que se midió en dos ocaciones diferentes (Sin cambio y con cambio) y determinar si hay un cambio entre las dos.
+
+#Hipótesis nula: No hay un cambio significativo al cambiar el protocolo de limpieza
+#Hipótesis alternativa: Hay un cambio significativo al cambiar el protocolo de limpieza
+
+habitaciones <- seq (1:25)
+cambio <- c (rep("Sin Cambio", 13), rep("Con Cambio", 12))
+calidad <- c(rep("Calidad baja", 4), rep("Calidad alta", 9), rep("Calidad baja", 5), rep("Calidad alta", 7))
+datos <- data.frame(habitaciones, calidad, cambio)
+tabla_1 <- table(calidad, cambio)
+print (tabla_1)
+
+prueba <- mcnemar.test(tabla_1)
+print(prueba)
+
+#El p-value de 0.4227 es mayor al nivel de significancia 0.05, por lo que no es posible rechazar la hipótesis nula, entonces se puede afirmar con un 95% de confianza que no hay un cambio significativo en el uso de un protocolo de limpieza nuevo o anterior
+
+
+```
+
+Pregunta2
+```{r}
+# Una agencia de marketing desea determinar si hay una diferencia significativa en la efectividad de tres estrategias publicitarias utilizadas para promocionar un nuevo producto. Para ello, se ha recopilado información de personas que fueron expuestas a las tres estrategias publicitarias, registrando si mostraron una aceptación (A) o rechazo (R) a cada una de ellas.
+# ¿Qué puede concluir la agencia de marketing sobre la efectividad de las estrategias publicitarias para promover el nuevo producto? Indicación: obtenga la muestra de 50 personas a partir del archivo “EP04 Datos.csv” que se encuentra en el directorio compartido, usando la semilla 347. Considere un nivel de significación α = 0,05
+
+
+#Qcochran
+
+# Hipótesis nula: la proporción de instancias en que se aprueba es la misma para todas las estrategias de marketing
+# Hipótesis alternativa: la proporción de instancias en que se aprueba es distinta para al menos una de las estrategias de marketing
+
+
+
+
+# Establecer semilla
+set.seed(347)
+
+# Lectura del archivo .cvs
+
+####CAMBIAR PARA REVISIÓN SI ES NECESARIO##
+datos_2 <- read.csv("EP04Datos.csv", sep = ";", header=TRUE)
+                    
+
+#Para este problema debemos usar la prueba Q de Cochran debido a que tenemos una variable de respuesta dicotómica (Aceptación o rechazo) y una variable categórica con más de dos categorías siendo estas las estrategias de marketing.
+
+
+# Obtención de la muestra
+muestra <- datos_2[sample(nrow(datos_2), 50),]
+
+# Matriz de datos en formato largo
+muestra <- muestra %>% pivot_longer(c("estrategia_1", "estrategia_2", "estrategia_3"),
+                                    names_to = "estrategia",
+                                    values_to = "resultado")
+
+muestra[["id"]] = factor(muestra[["id"]])
+muestra[["estrategia"]] = factor(muestra[["estrategia"]])
+
+
+q_cochran <- cochran.qtest(resultado ~ estrategia | id,
+                           data = muestra, alpha = 0.05)
+
+print(muestra)
+print(q_cochran)
+
+#Como se puede ver en el resultado, el p-value de 0.8858, dado por la prueba Q de Cochran, es mayor que el nivel de significancia 0.05, por lo tanto no es posible rechazar la hipótesis nula, así se dice con un 95% de confianza que la proporción que aprueba no difiere con distintas estrategias de marketing 
+```
+
+
+
+Pregunta3
+```{r cars}
+#En otro planeta se realiza un estudio sobre la preferencia de hábitat de dos especies de alienígenas. Después de observar a una muestra de 17 alienígenas de la especie EA14012-A y 10 de la especie EA14013-B durante meses, se ha determinado que 4 alienígenas de la primera y 8 de la segunda prefieren hábitats subterráneos, mientras los demás prefieren hábitats acuáticos. ¿Existe relación entre las especies alienígenas y elegir hábitats subterráneos o hábitats acuáticos?
+
+#Fisher
+
+#Ho: Las especies de alien son independientes.
+#Ha: Las especies de alien estan relacionadas.
+
+#Usamos esta prueba viendo que queremos ver una relación entre las variables y tenemos dos variables dicotómicas.
+
+# Construir la tabla de contingencia
+especies <- c(rep("EA14012-A", 17), rep("EA14013-B", 10))
+resultado <- c(rep("subterráneo", 4), rep("acuático", 13), rep("subterráneo", 8), rep("acuático", 2))
+datos <- data.frame(especies, resultado)
+print(datos)
+
+tabla <- xtabs(~resultado + especies, datos)
+print(tabla)
+
+# Aplicar prueba exacta de Fisher
+alfa <- 0.05 
+prueba <- fisher.test(tabla, 1-alfa)
+print(prueba)
+
+
+#p value = 0.006916 se rechaza la hipotesis nula dado que el 
+#nivel de significacion es mayor al p-value, entonces se puede decir con un 95% de confianza que existe una relación entre las especies de alien según si prefieren hábitats acuáticos o subterráneos
+```
+
+Pregunta 4
+```{r}
+#Se llevó a cabo una investigación entre dos grupos demográficos: residentes urbanos y suburbanos. Seleccionaron aleatoriamente 35 residentes urbanos y 30 residentes suburbanos, y se les preguntó sobre su preferencia de transporte para desplazarse en la ciudad entre tres opciones comunes, obteniéndose que de los primeros 15 usan el Metro, 14 usan bicicletas y 8 su vehículo particular. mientras que entre los segundos 12 prefieren el Metro, 7 las bicicletas y 11 el vehículo particular.
+#¿Son iguales las distribuciones de las preferencias de transporte entre los dos grupos demográficos?
+
+#Prueba x^2 de homogeneidad
+
+#Ho: Ambos grupos demográficos tienen las mismas preferencias de transporte.
+#Ha: Ambos grupos demográficos tienen distintas preferencias de transporte.
+
+#Para este problema usaremos la prueba chi cuadrado de homogeneidad, ya que tenemos dos poblaciones y queremos saber si la proporcion de sus preferencias entre ambos son iguales.
+r_urbano <- c (15 , 14 , 8)
+r_suburbano <- c (12, 7, 8)
+tabla <- as.table (rbind(r_urbano, r_suburbano ) ) 
+dimnames(tabla) <- list(tipo_demográfico = c( "Residentes urbanos" , "Residentes Suburbanos" ), Preferencia = c ( "   Metro" , "   Bicicletas" , "  Vehículo particular" ) ) 
+print(tabla)
+# Hacer prueba chi - cuadrado de homogeneidad
+prueba <- chisq.test(tabla)
+print(prueba) 
+
+
+
+#Debido a que el p-value obtenido (0.5678) es mayor al nivel de significancia (alfa = 0.05), no se puede rechazar la hipótesis nula, por lo tanto se puede decir con un 95% de confianza que no hay una diferencia notable en la distribución de las preferencias de ambos grupos demográficos.
+
+```
+
+
+
+
