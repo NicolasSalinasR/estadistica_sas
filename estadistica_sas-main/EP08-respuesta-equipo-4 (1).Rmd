@@ -1,0 +1,100 @@
+---
+title: "EP08-respuesta-equipo-4"
+author: "Equipo 4"
+date: "2024-04-30"
+output: html_document
+---
+# Equipo 4
+
+1.- Propongan una pregunta de investigación original, que involucre la comparación de una frecuencia de un evento o característica en dos grupos independientes (más abajo se dan unos ejemplos). Fijando una semilla propia, seleccionen una muestra aleatoria de hogares (100 < n < 150) y respondan la pregunta propuesta utilizando el método Monte Carlo.
+
+R: la pregunta que se ha formulado es:
+
+"Respecto a la proporción de viviendas de la región de Atacama en donde el dueño de esta es de nacionalidad chilena exclusiva, ¿Es esta similar entre hombres y mujeres que no tienen a una pareja viviendo en el hogar?"
+
+```{r}
+if (!requireNamespace('ggpubr', quietly = TRUE)){
+  install.packages('ggpubr')
+}
+if (!requireNamespace('tidyverse', quietly = TRUE)){
+  install.packages('tidyverse')
+}
+if (!requireNamespace('ez', quietly = TRUE)){
+  install.packages('ez')
+}
+
+library(ggpubr)
+library(ez)
+library(tidyverse)
+
+datos = read.csv2("EP08 Datos CASEN 2017.csv", stringsAsFactors = TRUE)
+
+set.seed(69)
+
+#Se usan solo las columnas que se quieren analizar
+datos = datos[, c("id.vivienda", "sexo", "pareja", "region", "r1a")]
+
+#Se filtran los datos para gente perteneciente a la región, y que sean solo de nacionalidad chilena
+datos_atacama = datos %>% filter(datos$region == "Regi�n de Atacama" & datos$r1a == "Chilena (Exclusiva)")
+
+#Se filtran 125 datos del total existentes en la tabla
+datos_filtrados = sample_n(datos_atacama, 125)
+
+#Ahora se obtienen los datos para mujeres y hombres por separado
+datos_hombre = datos_filtrados %>% filter(datos_filtrados$sexo == "Hombre")
+datos_mujer = datos_filtrados %>% filter(datos_filtrados$sexo == "Mujer")
+#.-.-.-.-.-.-...-.-.-...-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-..
+calcular_proporcion = function(datos){
+  n_total = nrow(datos)
+  n_cumplen_condiciones = sum(datos$pareja == "No tiene pareja en el hogar")
+  proporcion = n_cumplen_condiciones / n_total
+  return(proporcion)
+}
+
+obtenerPerm = function(i, datos_hombre, datos_mujer){
+  n1 = length(datos_hombre)
+  combinada = c(datos_hombre, datos_mujer)
+  n = length(combinada)
+  permutacion = sample(combinada, n, replace = FALSE)
+  nuevo1 = permutacion[1:n1]
+  nuevo2 = permutacion[n1+1:n]
+  return(list(nuevo1,nuevo2))
+}
+
+calcular_diferencia = function(datos, FUN){
+  muestra1 = datos[[1]]
+  muestra2 = datos[[2]]
+  diferencia = FUN(muestra1) - FUN(muestra2)
+  return(diferencia)
+}
+
+calcular_p = function(distribucion, valorObs, repeticiones, alternative){
+  if(alternative == "two.sided"){
+    numerador = sum(abs(distribucion) > abs(valorObs)) + 1
+    denominador = repeticiones + 1
+    valor_p = numerador/denominador
+  }
+  else if(alternative == "greater"){
+    numerador = sum(distribucion > valorObs) + 1
+    denominador = repeticiones + 1
+    valor_p = numerador/denominador
+  }
+  else{
+    numerador = sum(distribucion < valorObs) + 1
+    denominador = repeticiones + 1
+    valor_p = numerador/denominador
+  }
+  return(valor_p)
+}
+
+repeticiones = 1999
+
+x2 = lapply(1:repeticiones, obtenerPerm, datos_hombre, datos_mujer)
+
+x3 = calcular_diferencia(list(datos_hombre, datos_mujer), calcular_proporcion)
+
+distribucion = sapply(x2, calcular_diferencia, calcular_proporcion)
+
+x4 = calcular_p(distribucion, x3, repeticiones, "two.sided")
+```
+

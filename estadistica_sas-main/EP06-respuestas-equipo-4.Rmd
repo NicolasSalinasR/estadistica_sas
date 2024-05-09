@@ -1,0 +1,103 @@
+---
+title: "trabajo 6 estadistica biología"
+output: html_document
+date: "2024-04-18"
+---
+
+## contexto: Un equipo de investigadores del área de interacción humano-información está estudiando si el área temática y el nivel de dificultad del problema de información influyen en el tiempo (en segundos) que toma un usuario en formular una consulta de búsqueda para resolver dicho problema. Para ello, han reclutado a un grupo de participantes voluntarios, asignados aleatoriamente a distintos grupos. Cada participante debe resolver tres problemas de información con diferentes niveles de dificultad: baja, media y alta. A su vez, cada grupo debe resolver problemas relacionados a una temática diferente.
+
+### Equipo 4:
+En este momento, los investigadores buscan determinar si existen diferencias en el tiempo que tardan los usuarios en formular consultas para problemas con diferente nivel de dificultad en el área de biología.
+
+R: Para iniciar, se definiran las hipótesis nula y alternativa
+
+- Ho: No existen diferencias entre el tiempo que tardan los usuarios en formular consultas para problemas con diferente nivel de dificultad en el área de Biología
+- Ha: Existe diferencia entre el tiempo que tardan los usuarios en formular consultas para problemas en al menos un nivel de dificultad dentro del área de Biología.
+
+
+```{r}
+#Se usan las librerías necesarias para el ejercicio. Si no se encuentran instaladas en el equipo, se instalan automáticamente
+if (!requireNamespace('ggpubr', quietly = TRUE)){
+  install.packages('ggpubr')
+}
+if (!requireNamespace('tidyverse', quietly = TRUE)){
+  install.packages('tidyverse')
+}
+if (!requireNamespace('ez', quietly = TRUE)){
+  install.packages('ez')
+}
+
+library(ggpubr)
+library(ez)
+library(tidyverse)
+
+#Se lee el archivo .csv entregado 
+datos <- read.csv("EP06 Datos.csv", stringsAsFactors = TRUE)
+
+#Se filtran los datos del .csv a los que nos conviene, siendo esto, los datos del área de biología
+datos_filtrados <- datos %>%
+  filter(datos$area == "Biología")
+```
+
+Para usar la prueba de ANOVA, lo primero es comprobar la normalidad de la distribución que se está estudiando. Para esto, se haace uso de un gráfico QQ para visualizar los datos.
+
+```{r}
+#Se filtran los datos para cada dificultad y probar su normalidad para cada una en un gráfico QQ (y luego, en shapiro.test)
+datos_filtrados_alta <- datos_filtrados %>% 
+  filter(dificultad == "Alta")
+datos_filtrados_media <- datos_filtrados %>% 
+  filter(dificultad == "Media")
+datos_filtrados_baja <- datos_filtrados %>% 
+  filter(dificultad == "Baja")
+
+# Create ggplot
+g1 <- ggqqplot(datos_filtrados_alta, x = "tiempo", y = "difucultad", color = "red")
+print(g1)
+
+g2 <- ggqqplot(datos_filtrados_media, x = "tiempo", y = "difucultad", color = "blue")
+print(g2)
+
+g3 <- ggqqplot(datos_filtrados_baja, x = "tiempo", y = "difucultad", color = "cyan")
+print(g3)
+```
+
+A pesar de haber comprobado la normalidad con los gráficos QQ para cada tipo de dificultad, además se comprobará con el uso del test de Shapiro
+```{r}
+s1 <- shapiro.test(datos_filtrados_alta$tiempo)
+print(s1)
+s2 <- shapiro.test(datos_filtrados_media$tiempo)
+print(s2)
+s3 <- shapiro.test(datos_filtrados_baja$tiempo)
+print(s3)
+```
+Como p > 0.05 para los 3 test, se ha comprobado la normalidad para las 3 dificultades
+
+Además de esto, se considera que las muestras son correlacionadas ya que se mide la dificultad de Alta, Media y Baja para el mismo sujeto, esto comprobándose por el id.
+
+Luego, se ve que las muestras pertenecen al mismo grupo debido a que se habla de los sujeros del área de "Biología"
+
+Se procede a hacer el calculo con ezANOVA:
+```{r}
+#nivel de significancia
+alpha = 0.05
+
+#Test de ANOVA para muestras correlacionadas
+test <- ezANOVA(data = datos_filtrados, dv = tiempo, within  = dificultad, wid = id, return_aov = TRUE)
+print(summary(test$aov))
+
+print(test$`Mauchly's Test for Sphericity`)
+```
+Además de calcular ezANOVA, también se comprobó la condición de la matriz de covarianzas con el test de Mauchly, lo cual otorgó un valor notiramente alto, por lo que se considera que hay suficiente evidencia para considerar que la matriz de covarianzas es esférica.
+
+Considerando el valor dado de p por la prueba ezANOVA, se puede concluir que hay suficiente evidencia, con un 95% de confianza, para rechazar la hipótesis nula de que no hay diferencia entre las medias de tiempo de resolución de problemas entre las distintas dificultades
+
+A continuación se procede a la aplicación de un test de corrección Post-hoc, usando particularmente el test de Holm, ya que el valor de p encontrado anteriormente fue bastante bajo
+```{r}
+#Se realiza Holm
+holm <- pairwise.t.test(datos_filtrados[["tiempo"]], datos_filtrados[["dificultad"]], p.adj = "holm", paired = TRUE)
+print(holm)
+```
+
+Como se observa, todos los valores dados son menores al nivel de significancia (alpha = 0.05), por lo que aún después de la corrección se puede decir que las 3 muestras son diferentes entre si, sin haber alguna que se mantenga pareja respecto a otra. Cabe decir que la más cercana a esto sería la comparación entre la dificultad media y baja, teniendo un p-value de 0.00018, pero aún así, se dice que las 3 difieren entre si.
+
+Considerando que los p-value son tan bajos, se concluye que hay evidencia suficiente para decir con un 95% de confianza (inclusive podría decirse con un 99% de confianza ya que all(p-value) < 0.01) que se rechaza la hipótesis nula y se apoya la alternativa. Es decir, existe diferencia entre el tiempo que tardan los usuarios en formular consultas para problemas entre los 3 niveles de dificultad dentro del área de Biología.

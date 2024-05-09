@@ -1,0 +1,43 @@
+---
+title: "Pregunta 3"
+author: "Nicolás Muñoz"
+date: "2024-04-04"
+output: html_document
+---
+¿Una agencia de marketing desea determinar si hay una diferencia significativa en la efectividad de tres estrategias publicitarias utilizadas para promocionar un nuevo producto. Para ello, se ha recopilado información de personas que fueron expuestas a las tres estrategias publicitarias, registrando si mostraron una aceptación (A) o rechazo (R) a cada una de ellas.
+¿Qué puede concluir la agencia de marketing sobre la efectividad de las estrategias publicitarias para promover el nuevo producto? Indicación: obtenga la muestra de 50 personas a partir del archivo “EP04 Datos.csv” que se encuentra en el directorio compartido, usando la semilla 500. Considere un nivel de significación α=0,05
+```{r}
+# Leer los datos con el delimitador adecuado
+datos <- read.csv("EP04Datos.csv", sep = ";", header = TRUE)
+
+# Seleccionar una muestra aleatoria de 50 personas usando la semilla 500
+set.seed(500)
+muestra <- datos[sample(nrow(datos), 50), ]
+
+# Calcular las frecuencias observadas
+freq_obs <- table(muestra$estrategia_1, muestra$estrategia_2, muestra$estrategia_3)
+
+# Convertir la tabla de frecuencias en una matriz
+matriz_freq <- as.matrix(freq_obs)
+
+# Realizar la prueba de chi-cuadrado de Pearson
+chi_test <- chisq.test(matriz_freq)
+
+# Interpretar los resultados
+alpha <- 0.05
+print("Resultados de la prueba de chi-cuadrado de Pearson:")
+print(chi_test)
+
+if (chi_test$p.value < alpha) {
+  print("Hay evidencia suficiente para rechazar la hipótesis nula.")
+  print("Existen diferencias significativas en la efectividad de las estrategias publicitarias.")
+} else {
+  print("No hay suficiente evidencia para rechazar la hipótesis nula.")
+  print("No hay diferencias significativas en la efectividad de las estrategias publicitarias.")
+}
+
+
+```
+
+```
+

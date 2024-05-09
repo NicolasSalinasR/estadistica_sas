@@ -1,0 +1,143 @@
+---
+title: "EP04-Respuesta-Equipo-2"
+output: html_document
+date: "2024-04-07"
+---
+
+```{r libraries, message=FALSE, warning=FALSE, include=FALSE}
+
+library(dplyr)
+library(ggpubr)
+library(ggpattern)
+library(ggplot2)
+library(pwr)
+```
+
+#### 1. Un estudio reciente reveló que muchos espectadores y espectadoras experimentan niveles elevados de estrés antes de ver películas de suspenso. Para abordar este problema, un estudio piloto implementó un nuevo programa de preestreno diseñado para reducir el estrés y mejorar la experiencia de la audiencia. Para evaluar la efectividad de este programa, se reclutó a un grupo de 25 personas a quienes se les midió el nivel de estrés (alto o bajo) antes y después de participar en el programa de preestreno. Los resultados se presentan a continuación:
+
+#### - 8 personas no mostraron estrés ni antes ni después.
+
+#### - 5 personas que inicialmente estaban estresados dejaron de estarlo.
+
+#### - 12 personas mantuvieron un elevado nivel de estrés.
+
+#### ¿Qué se puede concluir acerca de la efectividad del nuevo programa de preestreno para reducir el estrés en los espectadores y espectadores de películas de suspenso?
+
+```{r 1}
+
+# Se decide usar la Prueba de McNemar, ya que se busca determinar si se produce algun cambio significativo sobre una caracteristica con 
+# respuesta dicotomica (Calmado/Estresado), la cual se mide en ocasiones diferentes. En este caso, se busca concluir sobre los resultados
+# de los niveles de estrés de 25 espectadores antes y después de un programa de preestreno.
+
+# H0: No hay cambios significativos en los espectadores
+# H1: Si hay cambios significativos en los espectadores
+
+# Se construye tabla de contingencia de la situación
+espectadores <- seq(1:25)
+antes <- c(rep("Calmado", 8), rep("Estresado", 17))
+despues <- c(rep("Calmado", 13), rep("Estresado", 12))
+datos <- data.frame(espectadores, despues, antes)
+tabla <- table(despues, antes)
+print(tabla)
+
+# Se aplica prueba de McNemar
+prueba = mcnemar.test(tabla)
+print(prueba)
+
+# Con un p-value = 0.07364, se falla al rechazar la hipótesis nula (con un nivel de significancia de alpha = 0.05), y se concluye que no hay
+# evidencia suficiente para creer que el programa de preestreno genere un cambio significativo en los niveles de estrés de los espectadores. 
+# Se debe tener en cuenta el hecho de que el p-value se acerca mucho al nivel de significancia, y esta proximidad sugiere que tal vez los 
+# resultados podrían llegar a ser significativos con un tamaño de muestra mayor.
+
+```
+
+#### 2. En un evento deportivo, las y los participantes tienen la opción de inscribirse en una carrera de velocidad o en una carrera de resistencia. Después de la inscripción, se sabe que, de los 11 hombres y 15 mujeres que participaron, 8 hombres eligen inscribirse en la carrera de velocidad y 12 mujeres prefieren la carrera de resistencia.
+
+#### ¿Tiene relación el género de las personas que participan del evento deportivo e inscribirse en la carrera de velocidad o en la carrera de resistencia?
+
+```{r 2}
+#Como queremos saber si existe alguna relacion entre las variables, usaremos la prueba de chi-cuadrado de independencia, donde la hipotesis nula nos dice que las variables son independientes, y la hipotesis alternativa que estan relacionadas. Se usará un nivel de signidicancia de 0.05 ya que no se indica nada al respecto en el enunciado
+#Primero creamos la tabla de contingencia
+velocidad = c(8, 3)
+resistencia = c(3, 12)
+tabla = as.table(rbind(velocidad, resistencia))
+dimnames(tabla) = list("tipo de competencia" = c("velocidad", "resistencia"),
+                       sexo = c("hombre", "mujer"))
+tabla
+
+#Ahora aplicamos la prueba chi-cuadrado (vemos un warning, por lo que se puede ir asumiendo que no se cumplen las condiciones para aplicar la prueba)
+prueba = chisq.test(tabla)
+
+#Antes debe ver si se cumplen las condiciones para poder aplicar el test, en el enunciado no nos dicen nada sobre si la muestra es aleatoria, pero de momento lo vamos a suponer
+#En cuanto a la cantidad de datos podemos ver que la frecuencia esperada de los hombres que eligen la competencia de velocidad es menor a 5, por lo que no se cumple con las condiciones necesarias
+round(prueba[["expected"]], 3)
+
+#Dado que no se cumplen con los requisitos para aplicar la prueba debemos aplicar la prueba de fisher, que nos sirve para muestras más pequeñas. En este caso las hipotesis se mantienen.
+alpha = 0.05
+fisher.test(tabla, 1-alpha)
+#Se puede ver que nos arroja un p-value = 0.015, por lo que se rechaza la hipotesis nula con un 95% de confianza, y decimos que si hay relación en el género de las personas que participan del evento deportivo e inscribirse en la carrera de velocidad o en la carrera de resistencia
+```
+
+#### 3. ¿Una agencia de marketing desea determinar si hay una diferencia significativa en la efectividad de tres estrategias publicitarias utilizadas para promocionar un nuevo producto. Para ello, se ha recopilado información de personas que fueron expuestas a las tres estrategias publicitarias, registrando si mostraron una aceptación (A) o rechazo (R) a cada una de ellas.
+
+¿Qué puede concluir la agencia de marketing sobre la efectividad de las estrategias publicitarias para promover el nuevo producto? Indicación: obtenga la muestra de 50 personas a partir del archivo "EP04Datos.csv" que se encuentra en el directorio compartido, usando la semilla 500. Considere un nivel de significación α=0,05
+
+
+```{r 3}
+#En este caso, la agencia de marketing quiere evaluar si hay diferencias significativas en la efectividad de tres estrategias publicitarias para promocionar un nuevo producto. Por lo tanto la prueba Q de Cochran es adecuada para determinar si hay una relación significativa entre dos variables categóricas.
+
+#La interpretación de los resultados se basa en el valor p obtenido de la prueba Q de Cochran. Si el valor p es menor que el nivel de significancia α (en este caso, 0.05), se rechaza la hipótesis nula de que no hay relación entre las estrategias publicitarias y las respuestas. Esto implica que hay evidencia suficiente para afirmar que existen diferencias significativas en la efectividad de las estrategias publicitarias. Si el valor p es mayor que α, no se puede rechazar la hipótesis nula y se concluye que no hay diferencias significativas en la efectividad de las estrategias publicitarias.
+
+library ( tidyverse )
+library ( RVAideMemoire )
+library ( rcompanion )
+
+# Leer los datos con el delimitador adecuado
+datos <- read.csv("EP04Datos.csv", sep = ";", header = TRUE)
+
+# Seleccionar una muestra aleatoria de 50 personas usando la semilla 500
+set.seed(500)
+muestra <- datos[sample(nrow(datos), 50), ]
+
+ # Crear matriz de datos .
+instancia <- muestra$id
+estrategia1 <- c(muestra$estrategia_1)
+estrategia2 <- c(muestra$estrategia_2)
+estrategia3 <- c(muestra$estrategia_3)
+datos <- data.frame ( instancia , estrategia1 , estrategia2 , estrategia3 )
+
+# Llevar matriz de datos a formato largo .
+datos <- datos %>% pivot_longer ( c("estrategia1" , "estrategia2" , "estrategia3") ,
+names_to = "Tipo_de_pago" ,
+values_to = "resultado")
+
+datos [[ "instancia" ]] <- factor ( datos [[ "instancia" ]])
+datos [[ "Tipo_de_pago" ]] <- factor ( datos [[ "Tipo_de_pago" ]])
+
+# Hacer prueba Q de Cochran .
+prueba <- cochran.qtest ( resultado ~ Tipo_de_pago | instancia ,
+data = datos , alpha = 0.05)
+print ( prueba )
+ 
+#Se puede ver que nos arroja un p-value de 0.9726 por lo que no hay suficiente evidencia para rechazar la hipótesis nula. Lo que significa que no hay diferencias significativas en la efectividad de las estrategias publicitarias.
+
+```
+
+#### 4. Un supermercado está interesado en determinar si la distribución de la clientela que prefieren pagar con diferentes métodos de pago es la misma en dos sucursales que están ubicadas en zonas de la cuidad con situación socioeconómica dispares (sucursal LC3 y sucursal LP2). Se seleccionaron aleatoriamente 30 personas de cada sucursal y se registró el método de pago utilizado por cada una. Se registraron que 7 personas pagaron con efectivo, 11 con tarjeta de crédito y 12 con tarjeta de débito en la sucursal LC3, mientras que 5 personas pagaron con efectivo, 18 con tarjeta de crédito y 7 con tarjeta de débito en la sucursal LP2.
+
+¿Existe evidencia de que la proporción de clientes y clientas que prefieren pagar con diferentes métodos de pago sea la misma en ambas sucursales?
+
+```{r 4}
+# Crear tabla de contingencia .
+LC3 <- c(7 , 11 , 12)
+LP2 <- c(5 , 18 , 7)
+
+tabla <- as.table ( rbind ( LC3 , LP2 ) )
+
+dimnames ( tabla ) <- list ( sucursal = c("LC3" , "LP2") ,
+lenguajes = c("efectivo", "credito", "debito"))
+
+#Hacer prueba chi - cuadrado de homogeneidad .
+prueba <- chisq.test ( tabla )
+print ( prueba )
+```

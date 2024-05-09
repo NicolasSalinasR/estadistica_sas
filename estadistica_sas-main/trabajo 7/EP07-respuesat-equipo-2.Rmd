@@ -1,0 +1,212 @@
+---
+title: "EP07-respuesta-equipo-2"
+output: html_document
+date: "2024-04-25"
+---
+
+## Contexto: En el trabajo de título de una estudiante del DIINF se reportan tiempos de ejecución (en milisegundos) y la cercanía con la solución óptima (en por ciento) de la mejor solución encontrada con tres versiones de un algoritmo genético para resolver instancias del problema del vendedor viajero disponibles en repositorios públicos. Ahora debe enfrentar el análisis de estos datos, por que está solicitando ayuda de las y los estudiantes de Estadística Inferencial.
+
+
+```{r}
+#librerias
+
+#leer archivo
+datos <- read.csv("EP07 Datos.csv", stringsAsFactors = TRUE)
+```
+
+
+### Preguntas:
+
+##### 1.- Observando los datos, la memorista sospecha que hay diferencias significativas en el tiempo de ejecución entre las versiones A y B del algoritmo cuando las instancias tienen 70 o más nodos. ¿Los datos respaldan la intuición de la memorista? Para responder, filtren los datos para tener las instancias con 70 o más nodos y seleccionen las columnas de los tiempos de ejecución de las versiones A y B en formato ancho. Usando como semilla el valor 13, obtenga muestras aleatorias independientes de 20 tiempos registrados por la versión A y 18 tiempos registrados por la versión B del algoritmo. Realicen un análisis estadístico pertinente (enunciar hipótesis, revisar condiciones, seleccionar prueba) para responder la pregunta planteada, utilizando pruebas no paramétricas de ser necesario.
+
+
+##### 2.- La memorista también sospecha que, al comparar las mismas instancias de prueba con iguales características, las mejores soluciones encontradas por las versiones B y C tienen rendimientos distintos. ¿Estará en lo cierto? Para responder, filtren los datos para tener las instancias con 70 o más nodos y seleccionen las columnas con el mejor rendimiento de las versiones B y C en formato ancho. Usando como semilla el valor 73, obtengan una muestra aleatoria de 24 instancias. Realicen un análisis estadístico pertinente (enunciar hipótesis, revisar condiciones, seleccionar prueba) para responder la pregunta planteada, utilizando pruebas no paramétricas de ser necesario.
+
+primero se filtraran los datos como se solicita para obtener solo las instancias con 70 o mas nodos y se utilizara la semilla 73 para obtener una muestra aleatoria de 24 instancias
+```{r}
+set.seed(73)
+
+datos_pregunta_2 <- subset(datos, n.nodos >= 70)
+
+muestra_pregunta_2 <- datos_pregunta_2[sample(nrow(datos_pregunta_2),24), ]
+
+mejorb <-  muestra_pregunta_2$mejor.B
+
+mejorc <- muestra_pregunta_2$mejor.C
+```
+
+para comprobar si es que las mejores soluciones encontradas de las versiones B y C tienen rendimientos distintos se realizara un analisis de la media de la muestra de 24 instancias seleccionados, como los datos son pareados se utilizara la prueba de t students para datos pareados, por lo mismo se revisara si los datos cumplen con las condiciones, dichas condiciones son 
+
+1.- "las observaciones son independientes entre si"
+ esto se puede ver ya que la muestra fue elegida de forma aleatoria, por lo que se puede asumir que las observaciones si son independientes entre si
+ 
+2.- "las observaciones provienen de una poblacion que sigue una distribucion normal"
+
+para comprobar esto se utilizara la prueba de shapiro y de esta forma se sabra si las observaciones provienen de una distribucion normal
+
+```{r}
+# aplicar shapiro.test
+
+diferencia <- mejorb - mejorc
+
+normalidad_pregunta_2 <- shapiro.test(diferencia)
+
+normalidad_pregunta_2
+
+```
+una ves verificadas las condiciones se aplicara la prueba de T student utilizando un nivel de significancia del 95%
+
+con las hipotesis:
+
+Hipotesis nula: las mejores soluciones de B y C tienen el mismo rendimiento
+Hipotesis alternativa: las mejores soluciones de B y C tienen rendimiento distinto
+
+```{r}
+
+alfa = 0.05
+valor_nulo <- 0
+t_students <- t.test(x = mejorb,
+                     y = mejorc,
+                     paired = TRUE,
+                     alternative = "two.sided",
+                     mu = valor_nulo,
+                     conf.level = 1-alfa)
+
+t_students
+
+```
+como se puede ver por el resultado, no existe evidencia suficiente para refutar la hipotesis nula, pues el p-value es mas alto que el nivel de significancia, lo que indica que con un 95% de confiabilidad de falla en rechazar la hipotesis nula.
+
+ahora se procedera a realizar un procedimiento similar pero utilizando una prueba no parametrica, dicha prueba no parametrica es la prueba de rangos con signo de wilcoxon.
+
+para utilizar esta prueba las condiciones son:
+
+1.- "que los pares de observaciones sean independientes"
+esto se cumple ya que se obtuvieron de una forma aleatoria.
+
+2.- "la escala de medicion empleada para las observaciones es intrinsecamente continua"
+esto tambien se cumple pues la escala empleada es el tiempo, y el tiempo es una escala continua
+
+3.- "la escala de medicion empleada para ambas muestras debe ser a lo menos ordinal"
+
+esto tambien se cumple pues el tiempo es una escala ordinal
+
+por lo anterior las 3 condiciones se cumplen, entonces es viable utilizar la prueba de rangos con signo de wilcoxon
+
+para la cual las hipotesis seran las mismas que antes:
+
+
+Hipotesis nula: las mejores soluciones de B y C tienen el mismo rendimiento
+Hipotesis alternativa: las mejores soluciones de B y C tienen rendimiento distinto
+
+```{r}
+prueba_wilcox <- wilcox.test(mejorb, mejorc, alternative = "two.sided", paired =TRUE, conf.level = 1-alfa)
+
+prueba_wilcox
+```
+como se puede observar en este caso el p-value tambien es mayor al nivel de significancia seleccionado, por lo tanto de igual manera que utilizando la prueba t students se puede afirmar con un 95% de confiabilidad que se falla en rechazar la hipotesis nula en favor de la hipotesis alternativa
+
+
+##### 3.- La memorista sospecha que hay diferencias significativas en el tiempo de ejecución entre las versiones del algoritmo cuando las instancias de prueba tienen 50 o más nodos. ¿Los datos respaldan la intuición de la memorista? Para responder, filtren los datos para tener las instancias con 50 o más nodos y seleccionen las columnas con los tiempos de ejecución registrados (en formato ancho). Usando como semilla el valor 43, obtengan muestras aleatorias independientes de 12, 14 y 13 tiempos registrados por las versiones A, B y C, respectivamente. Realicen un análisis estadístico pertinente (enunciar hipótesis, revisar condiciones, seleccionar prueba) para responder la pregunta planteada, utilizando pruebas no paramétricas de ser necesario
+
+
+##### 4.- La memorista también sospecha que, al comparar las mismas instancias con iguales características, las mejores soluciones encontradas por las diferentes versiones del algoritmo tienen rendimientos distintos. ¿Estará en lo cierto? Para responder, filtren los datos para tener las instancias con 50 o más nodos y seleccionen las columnas con los mejores rendimientos registrados. Usando como semilla el valor 16, obtengan una muestra aleatoria de 22 instancias. Realicen un análisis estadístico pertinente (enunciar hipótesis, revisar condiciones, seleccionar prueba) para responder la pregunta planteada, utilizando pruebas no paramétricas de ser necesario.
+
+primero se filtraran los datos como se solicita 
+
+```{r}
+
+set.seed(16)
+
+datos_pregunta_4 <- subset(datos, n.nodos >= 50)
+
+muestra_pregunta_4 <- datos_pregunta_4[sample(nrow(datos_pregunta_4),22), ]
+
+mejora_pregunta4 <- muestra_pregunta_4$mejor.A
+
+mejorb_pregunta4 <-  muestra_pregunta_4$mejor.B
+
+mejorc_pregunta4 <- muestra_pregunta_4$mejor.C
+
+
+```
+una vez filtrados los datos, se procedera a responder la pregunta de la memorista, y para hacer esto es necesario utilizar la prueba de anova para muestras pareadas
+
+para utilizar esta prueba hay 4 condiciones
+
+1.- "la escala con que se mide la variable dependiente tiene propiedades de una escala de intervalos iguales"
+ 
+En este caso la escala con la que se mide la variable dependiente es el tiempo, y este posee una escala de intervalos iguales
+
+2.- "Las mediciones son independientes al interior de cada grupo"
+
+En este caso esto tambien se cumple pues las muestras fueron elegidas de manera aleatoria
+
+3.- "se puede suponer razonablemente que la poblacion de origen sigue una distribucion normal"
+para comprobar esto se realizara la prueba de shapiro para las diferencias de las muestras para dicha prueba se utilizara un valor de significancia de 0.1
+```{r}
+diferencia1 <- mejora_pregunta4 - mejorb_pregunta4
+diferencia2 <- mejorb_pregunta4 - mejorc_pregunta4
+diferencia3 <- mejora_pregunta4 - mejorc_pregunta4
+
+norm1 <- shapiro.test(diferencia1)
+
+norm2 <- shapiro.test(diferencia2)
+
+norm3 <- shapiro.test(diferencia3)
+
+norm1
+
+norm2
+
+norm3
+
+```
+como se puede apreciar el p-value de diferencia2, es menor al nivel de significancia por lo tanto no sigue una distribucion normal y no se cumple las condiciones para utilizar la prueba de anova, por lo mismo se utilizara una prueba no parametrica, dicha prueba no parametrica es la prueba de friedman
+
+las condiciones para utilizar la prueba de friedman son:
+
+1.- "la variable independiente debe ser categorica y tener a lo menos 3 niveles"
+en este caso se cumple pues hay 3 niveles, los cuale son "mejorA, mejorB, mejorC"
+
+2.- "la escala de la variable dependiente debe ser a lo menos ordinal"
+en este caso tambien se cumple pues la variable dependiente es el tiempo y este es ordinal
+
+3.- "las observaciones son una muestra aleatoria e independiente de la poblacion"
+en este caso como se hizo una muestra aleatoria esto se cumple
+
+como se acaba de decir se cumplen todas las condiciones para utilizar la prueba de friedman, se procedera a utilizar dicha prueba con las siguientes hipotesis
+
+Hipotesis nula: las muestras poseen el mismo rendimiento
+Hipotesis alternativa: las muestras no poseen el mismo rendimiento
+
+para esto se utiliara un nivel de significancia del 0.1
+
+```{r}
+dependiente <- c(mejora_pregunta4, mejorb_pregunta4, mejorc_pregunta4)
+
+independiente <- c(rep("mejor.A", length(mejora_pregunta4)),
+                   rep("mejor.B", length(mejorb_pregunta4)),
+                    rep("mejor.C", length(mejorc_pregunta4)))
+
+independiente <- factor(independiente)
+
+sujeto <- rep(1:22, 3)
+
+datos <- data.frame(sujeto, dependiente, independiente)
+
+alfa <- 0.1
+
+prueba_friedman <- friedman.test(dependiente ~ independiente | sujeto, data = datos)
+
+print(prueba_friedman)
+```
+el resultado de esta prueba es de un p-value =0.002287, dicho valor es menor a la significancia elegida, por lo tanto con un 90% de confiabilidad se rechaza la hipotesis nula a favor de la alternativa, por lo tanto existen diferencias entre el rendimiento de los algoritmos, para saber entre cuales algoritmos hay diferencias se aplicara una prueba post-hoc
+
+```{r}
+post_hoc <- pairwise.wilcox.test(datos$dependiente, datos$independiente, p.adjust.method = "holm", paired = TRUE)
+
+post_hoc
+```
+como se puede ver con esta prueba post-hoc todos los valores presentan diferencias significativas, entre si, esto tomando un 0.1 de nivel de significancia por lo tanto se puede afirmar con un 90% de confiabilidad que existen diferencias entre todos los rendimientos de los algoritmos.
+

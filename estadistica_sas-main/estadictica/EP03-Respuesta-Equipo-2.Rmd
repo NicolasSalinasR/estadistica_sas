@@ -1,0 +1,125 @@
+---
+title: "EP03-Respuesta-Equipo-2"
+author: "Ivan Misle, Nicolas Muñoz, William Zubarzo Flores"
+date: "2024-04-02"
+output: html_document
+---
+
+En una planta química hay dos máquinas que envasan detergentes industriales en bidones con un volumen de producto que sigue una distribución normal con desviación estándar de 1 litro. La ingeniera a cargo de la planta debe asegurar que los bidones se están llenando con una media de 10 litros. Pero ella tiene la sospecha de que hay desviaciones en esta media, lo que piensa confirmar usando una muestra aleatoria de 100 envases (50 de cada una de las máquinas). También cree que hay diferencia en el cumplimiento del volumen requerido entre la máquina más antigua y la más moderna, que han de andar por el 90% y 96% de los bidones, respectivamente.
+
+1. Si la ingeniera está seguro de que el verdadero volumen medio no puede ser inferior a 10 litros y piensa rechazar la hipótesis nula cuando la muestra presente una media mayor a 10,25 litros, ¿cuál es la probabilidad de que cometa un error de tipo I? Para responder, generen un gráfico de la distribución muestral de las medias hipotetizada en donde se marque la zona correspondiente a la probabilidad solicitada, para luego, basándose en este gráfico, calcular el área correspondiente. Tome como ejemplo los scripts presentados en la lectura sobre poder estadístico.
+
+```{r libraries, message=FALSE, warning=FALSE, include=FALSE}
+library(dplyr)
+library(ggpubr)
+library(ggpattern)
+library(ggplot2)
+library(pwr)
+```
+
+
+```{r 1}
+sigma = 1
+media = 10
+n = 100
+SE = sigma/ sqrt(n)
+z_critico = 10.25
+
+#Generamos el grafico
+limites = media + c(-5, 5) * SE
+g = ggplot() + xlim(limites)
+g = g + labs(x = "Litros", y = "Densidad", title = "Grafico de densidad") + theme_pubr()
+distribucion = stat_function(fun = dnorm,
+                       args = list(mean = media, sd = SE))
+g1 = stat_function(fun = dnorm, 
+                   args = list(mean = media, sd = SE), 
+                   geom = "area", fill = "blue",
+                   xlim = c(z_critico, limites[2]))
+
+g = g + distribucion + g1
+print(g)
+
+#Calculamos la probabilidad de cometer un error tipo 1 (alpha)
+alpha = pnorm(z_critico, mean = media, sd = SE, lower.tail = FALSE)
+alpha
+``` 
+Tal como se ve en el grafico el error de cometer un error tipo I es muy grande, y corresponde al 40,1%.
+
+2. Si el verdadero volumen medio de los bidones fuera de 10,2 litros, ¿cuál sería la probabilidad de que la ingeniera, que obviamente no conoce este dato, cometa un error de tipo II? Para responder, agregue al gráfico anterior la verdadera distribución muestral de las medias y marquen (con otro color) la zona correspondiente a la probabilidad solicitada, para luego, basándose en este gráfico, calcular el área correspondiente. También hay ejemplos de este procedimiento en la lectura sobre poder estadístico.
+
+```{r 2}
+media_verdadera = 10.2
+
+#Generamos el grafico real
+g2 = stat_function(fun = dnorm, 
+                   args = list(mean = media_verdadera, sd = SE))
+g_beta = stat_function(fun = dnorm, 
+                     args = list(mean = media_verdadera, sd = SE),
+                     geom = "area", fill = "red", alpha = 0.2, 
+                     xlim = c(limites[1], z_critico))
+g2 = g + g2 + g_beta
+g2
+beta = pnorm(z_critico, mean = media_verdadera, sd = SE)
+beta
+```
+La probabilidad de cometer un error de tipo II es del 52%.
+
+3. Como no se conoce el verdadero volumen medio, genere un gráfico del poder estadístico con las condiciones anteriores, pero suponiendo que el verdadero volumen medio podría variar de 10 a 10,5 litros. Hay un ejemplo de este tipo de gráfico en la lectura sobre poder estadístico.
+
+```{r 3}
+sigma = 1
+media = 10
+n = 100
+SE = sigma/ sqrt(n)
+z_critico = 10.5
+
+#Generamos el grafico
+limites = media + c(-10, 10) * SE
+g3 = ggplot() + xlim(limites)
+g3 = g3 + labs(x = "Litros", y = "Densidad", title = "Grafico de densidad") + theme_pubr()
+distribucion = stat_function(fun = dnorm,
+                       args = list(mean = media, sd = SE))
+g4 = stat_function(fun = dnorm, 
+                   args = list(mean = media, sd = SE), 
+                   geom = "area", fill = "blue",
+                   xlim = c(z_critico, limites[2]))
+
+g3 = g3 + distribucion + g4
+
+g5 = stat_function(fun = dnorm, 
+                   args = list(mean = media_verdadera, sd = SE))
+areag5 = stat_function(fun = dnorm, 
+                   args = list(mean = media_verdadera, sd = SE),
+                   geom = "area", fill = "red",
+                   xlim = c(z_critico, limites[2]))
+g5 = g3 + g5 + areag5
+g5
+
+
+poder = pnorm(z_critico, mean = media_verdadera, sd = SE, lower.tail = FALSE)
+poder
+```
+El poder es de 0.001 = 0.1%
+
+4. Considerando un volumen medio de 10 litros, ¿cuántos bidones deberían revisarse para conseguir un poder estadístico de 0,75 y un nivel de significación de 0,05?
+
+```{r 4}
+media = 10
+poder = 0.75
+alpha = 0.05
+
+
+
+#Usamos el test pwr.norm.test que proporciona la libreria pwr
+pwr.norm.test(d = (10.2-10)/1, sig.level = 0.05, power = 0.75, alternative = "greater")
+```
+
+5. ¿Alcanzaría esta muestra para detectar la diferencia que la ingeniera sospecha que existe entre las dos máquinas de la planta con las mismas probabilidades de cometer errores?
+
+```{r 5}
+valor <- ES.h(0.9, 0.96)
+valor
+pwr.2p.test(h = valor, sig.level =  0.05,power =  0.75, alternative = "two.sided")
+
+```
+Esta muestra no alcanza para detectar la diferencia que la ingeniera sospecha, puesto que por lo que se puede apreciar la muestra que se necesita para aceptar esto, es de 239 aproximadamente y la muestra que se toma como base es de 100.

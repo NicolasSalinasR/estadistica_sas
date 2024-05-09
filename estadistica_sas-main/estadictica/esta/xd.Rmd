@@ -1,0 +1,40 @@
+---
+title: "Pregunta 1 (¿?)"
+author: "Nicolás Muñoz"
+date: "2024-03-19"
+output: html_document
+---
+## 1. El Comité Olímpico cree que el mejor tiempo medio de los atletas de raza negra después de ingresar al programa de entrenamiento es superior a 12,4 segundos. ¿Soportan los datos esta afirmación?
+
+```{r}
+library(ggplot2)
+
+# Leer los datos
+datos <- read.csv2("EP02_Datos.csv", stringsAsFactors = TRUE)
+
+# Filtramos los datos solo para obtener los datos que sean de la raza negra
+datos_ngrs <- datos %>% filter(Raza == "Negra")
+
+# Obtenemos la columna solo
+ngrs_post <- datos_ngrs$Posterior
+```
+
+### Hipotesis
+#### Utilizaremos un nivel de confianza del 95% (alfa = 0,05)
+#### Hipotesis nula: el tiempo medio de los atletas de raza negra despues de entrar al programa es de 12,4
+#### Hipotesis alternativa: el tiempo medio de los atletas de raza negra despues de entrar al programa es mayor a 12,4
+
+### Ahora probamos normalidad
+
+```{r}
+prue_norm <- shapiro.test(ngrs_post)
+prue_norm
+```
+#### La prueba de Shaqpiro nos dio un valor p = 0.2225 el cual es mayor a nuestro nivel de significancia, por lo tanto, podemos suponer con relativa confianza que los datos siguen una distribución normal.
+
+### T test
+
+```{r}
+t.test(ngrs_post, alternative = "greater",  mu = 12.4, conf.level =  1 - 0.05)
+```
+#### El valor p es de 0.27 por lo que es mayor a nuestro nivel de significancia que es 0.05, por lo que no hay suficiente evidencia para rechazar la hipotesis nula, por lo tanto, podemos asegurar con un nivel de confianza de 95% que la media de tiempo de los correrores de raza negra no mayor a 12.4.

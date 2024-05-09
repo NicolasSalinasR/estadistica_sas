@@ -1,0 +1,46 @@
+---
+title: "trabajo 6 estadistica biología"
+output: html_document
+date: "2024-04-18"
+---
+
+## contexto: Un equipo de investigadores del área de interacción humano-información está estudiando si el área temática y el nivel de dificultad del problema de información influyen en el tiempo (en segundos) que toma un usuario en formular una consulta de búsqueda para resolver dicho problema. Para ello, han reclutado a un grupo de participantes voluntarios, asignados aleatoriamente a distintos grupos. Cada participante debe resolver tres problemas de información con diferentes niveles de dificultad: baja, media y alta. A su vez, cada grupo debe resolver problemas relacionados a una temática diferente.
+
+### Equipo 4:
+En este momento, los investigadores buscan determinar si existen diferencias en el tiempo que tardan los usuarios en formular consultas para problemas con diferente nivel de dificultad en el área de biología.
+
+
+```{r}
+library(ggpubr)
+library(ez)
+library(tidyverse)
+ 
+datos <- read.csv("EP06 Datos.csv", stringsAsFactors = TRUE)
+
+datos_filtrados <- datos %>%
+  filter(datos$area == "Biología")
+
+```
+
+
+
+```{r}
+g<- ggqqplot(datos_filtrados, x = "tiempo", y = "difucultad", color = "dificultad")
+print(g)
+
+```
+
+
+```{r}
+test <- ezANOVA(data = datos_filtrados, dv = tiempo, within  = dificultad, wid = id, return_aov = TRUE)
+print(summary(test$aov))
+
+
+print(test$`Mauchly's Test for Sphericity`)
+```
+```{r}
+holm <- pairwise.t.test(datos_filtrados[["tiempo"]], datos_filtrados[["dificultad"]], p.adj = "holm", paired = TRUE)
+print(holm)
+```
+
+

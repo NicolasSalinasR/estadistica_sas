@@ -1,0 +1,115 @@
+---
+title: "Untitled"
+author: "Nicolás Muñoz"
+date: "2024-05-03"
+output: html_document
+---
+
+Propongan una pregunta de investigación original, que involucre la comparación de las medias de más de dos grupos independientes (más abajo se dan unos ejemplos). Fijando una semilla distinta a la anterior, seleccionen una muestra aleatoria de hogares (200 < n < 300) y respondan la pregunta propuesta utilizando bootstrapping. Solo por ejercicio académico, aplique un análisis post-hoc con bootstrapping aunque este no fuera necesario.
+
+El ingreso per cápita (ytotcorh / numper) promedio ¿es similar segun el oficio (oficio1) oficios solo de Trabajadores de los servicios y vendedores de comerci, Tï¿½cnicos profesionales de nivel medi, Fuerzas Armada,Profesionales, cientï¿½ficos e intelectuale, Empleados de oficina?
+
+Esta pregunta es interesante porque proporciona información sobre la equidad económica, el bienestar laboral y las posibles áreas de intervención para mejorar las condiciones económicas de diferentes grupos ocupacionales.
+
+```{r}
+if (!requireNamespace('ggpubr', quietly = TRUE)){
+  install.packages('ggpubr')
+}
+if (!requireNamespace('tidyverse', quietly = TRUE)){
+  install.packages('tidyverse')
+}
+if (!requireNamespace('ez', quietly = TRUE)){
+  install.packages('ez')
+}
+
+library(ggpubr)
+library(ez)
+library(tidyverse)
+
+# Cargar los datos desde el archivo CSV
+datos <- read.csv2("EP08 Datos CASEN 2017.csv", stringsAsFactors = TRUE)
+```
+
+
+Generamos los datos para responder la pregunta, haciendo los filtros correspondientes 
+```{r}
+# Calcular el ingreso per cápita
+datos$ingreso_per_capita <- datos$ytotcorh / datos$numper
+
+# Filtrar la muestra para incluir solo los oficios de interés
+oficios_interes <- c("Trabajadores de los servicios y vendedores de comerci", 
+                     "Técnicos profesionales de nivel medi", 
+                     "Fuerzas Armada", 
+                     "Profesionales, científicos e intelectuales", 
+                     "Empleados de oficina")
+muestra <- datos[datos$oficio1 %in% oficios_interes, ]
+
+# Fijar una semilla para reproducibilidad
+set.seed(123)
+
+# Seleccionar una muestra aleatoria de hogares
+tamano_muestra <- sample(200:300, 1)
+muestra <- muestra[sample(nrow(muestra), tamano_muestra, replace = FALSE), ]
+
+```
+
+Se eligio realizar ANOVA para poder calcular las operaciones
+```{r}
+# Realizar el análisis de ANOVA
+modelo_anova <- aov(ingreso_per_capita ~ oficio1, data = muestra)
+
+cat("Se muestra una tabla donde estan los oficios seleccionados y los datos reciduales de la muestra aleatoria, todo esto en ralacion a Df: Grados de libertad. Sum Sq: Suma de cuadrados. Mean Sq: Media de cuadrados. F value: Es la relación entre la variabilidad entre grupos. Pr(>F): Es la probabilidad de observar un valor F tan grande como el observado si la verdadera diferencia entre las medias es cero.\n ")
+# Mostrar los resultados del ANOVA
+summary(modelo_anova)
+```
+
+
+```{r}
+# Realizar bootstraping para estimar las medias
+bootstrap_means <- tapply(muestra$ingreso_per_capita, muestra$oficio1, function(x) mean(x, na.rm = TRUE))
+
+cat("Se muestran los diferentes oficios  con sus valores estimados, los que presentan NA son porque no se toman en consideración en la pregunta propuesta.\n")
+# Imprimir los resultados del bootstraping
+print(bootstrap_means)
+```
+
+
+```{r}
+# Función para calcular la diferencia de medias y sus intervalos de confianza
+calcular_diferencia_medias <- function(x, y) {
+  diferencia <- mean(x, na.rm = TRUE) - mean(y, na.rm = TRUE)
+  boot_means_x <- replicate(1000, mean(sample(x, replace = TRUE)))
+  boot_means_y <- replicate(1000, mean(sample(y, replace = TRUE)))
+  diff_boot_means <- boot_means_x - boot_means_y
+  ci <- quantile(diff_boot_means, c(0.025, 0.975))
+  return(list(diferencia = diferencia, ci = ci))
+}
+
+# Realizar comparaciones de pares de grupos
+pares_de_grupos <- combn(unique(muestra$oficio1), 2, simplify = TRUE)
+resultados_posthoc <- list()
+
+for (i in 1:ncol(pares_de_grupos)) {
+  grupo1 <- pares_de_grupos[1, i]
+  grupo2 <- pares_de_grupos[2, i]
+  x <- muestra$ingreso_per_capita[muestra$oficio1 == grupo1]
+  y <- muestra$ingreso_per_capita[muestra$oficio1 == grupo2]
+  resultados_posthoc[[paste(grupo1, "-", grupo2)]] <- calcular_diferencia_medias(x, y)
+}
+
+cat("Aqui se impimen los resiltados del pos-hoc, realizando comparaciones para pares de grupos hasta pasar por todos los oficios deleccionados, mostrando, $diferencia: Esta es la diferencia en las medias entre los dos grupos, $ci: Estas son las estimaciones del intervalo de confianza del 97.5% para la diferencia de medias, es probable que la verdadera diferencia este entre el rango de los resultados de 2.55 y 97.5%.")
+
+# Imprimir los resultados del análisis post-hoc
+print("Resultados del análisis post-hoc:")
+for (i in 1:length(resultados_posthoc)) {
+  print(names(resultados_posthoc)[i])
+  print(resultados_posthoc[[i]])
+}
+
+```
+Se puede concluir que el análisis proporciona información valiosa sobre la equidad económica entre diferentes grupos ocupacionales. La tabla ANOVA muestra que no hay una diferencia significativa en el ingreso per cápita entre los diferentes grupos ocupacionales seleccionados (p-valor = 0.207).
+
+Los resultados del bootstraping muestran las estimaciones de las medias de ingreso per cápita para cada uno de los grupos seleccionados. Algunos grupos tienen valores NA debido a que no están representados en la muestra aleatoria.
+
+El análisis post-hoc proporciona comparaciones de pares de grupos, mostrando la diferencia en las medias de ingreso per cápita y los intervalos de confianza del 97.5%. 
+

@@ -1,0 +1,52 @@
+---
+title: "Pregunta 1"
+author: "Nicolás Muñoz, Nicolas Saavedra, Nicolas Salinas"
+date: "2024-03-19"
+output: html_document
+---
+
+# pregunta:
+
+### ¿Se encuestaron más o menos la misma cantidad de gente en cada provincia de la RM?
+
+Para resolver la pregunta planteada con anterioridad, en primera instancia se debe definir que es mas o menos la misma cantidad de entrevistados, para esto como grupo se considero un margen de diferencia de un 10% entre la frecuencia de cada provincia, para verificar si este margen se cumple se realizara un grafico utilizando la libreria ggplot2 para poder visualizar los la frecuencia de cada provincia de una forma mas visual, ademas se calculara el rango, si en el rango se puede apreciar un margen del 10% en las frecuencias significa que todas las frecuencias cumplen este margen.
+
+```{r}
+library(ggplot2)
+
+# Leer los datos
+datos <- read.csv2("EP01_Datos_Casen_2017.csv", stringsAsFactors = TRUE)
+
+
+# Definir una paleta de colores para las provincias
+colores <- c("green", "red", "blue", "purple", "yellow", "black")
+
+# Crear un gráfico de barras con colores diferentes por provincia
+g <- ggplot(datos, aes(x = provincia, fill = provincia)) +
+  geom_bar() +
+  scale_fill_manual(values = colores) + # Utilizar la paleta de colores definida
+  labs(title = "Cantidad de entrevistados por provincia",
+       x = "Provincia",
+       y = "Frecuencia")
+
+print(g)
+
+```
+
+Una vez graficado se puede apreciar que por mucho la provincia donde se entrevisto a mas gente fue en santiago, ahora como se dijo anteriormente se calculara el rango.
+
+```{r}
+contingencia <- as.data.frame(xtabs(~ provincia, data = datos))
+
+# Calcular el rango de los valores de la tabla de contingencia
+rango_valores <- range(contingencia$Freq)
+
+# Imprimir el rango de los valores
+print(rango_valores)
+```
+
+La menor frecuencia es de 977 mientras que la mayor es de 21179, evidentemente no cumple con el margen del 10%, por lo que no son mas o menos la misma cantidad.
+
+### conclucion:
+
+Por lo mencionado anteriormente no se encuestaron mas o menos la misma cantidad de gente en las distintas provincias de la region metropolitana
