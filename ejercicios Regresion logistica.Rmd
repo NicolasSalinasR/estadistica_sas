@@ -1,0 +1,209 @@
+---
+title: "estudio regresion logistica"
+author: "Nicolas salinas"
+date: "2024-08-23"
+output: html_document
+---
+
+```{r}
+# 1. Cargar las librerías necesarias
+library(car)          # Para funciones de regresión y diagnóstico
+library(ggfortify)    # Para visualización de modelos
+library(ggpubr)       # Para facilitar la creación de gráficos con ggplot2
+library(psych)        # Para análisis de datos psicométricos
+library(tidyverse)    # Conjunto de paquetes para manipulación de datos y gráficos
+library(ggrepel)      # Para evitar superposición de etiquetas en gráficos
+
+
+
+
+```
+
+```{r}
+
+# 2. Cargar y preparar los datos
+datos <- mtcars
+
+# Convertir la variable 'am' en factor y cambiar el orden de los niveles 
+# para que el modelo prediga 'automático' (que es el segundo nivel)
+datos[["am"]] <- factor(datos[["am"]], labels = c("automático", "manual"))
+datos[["am"]] <- factor(datos[["am"]], levels = c("manual", "automático"))
+
+# Convertir otras variables no numéricas en factores
+datos[["cyl"]] <- factor(datos[["cyl"]])
+datos[["vs"]] <- factor(datos[["vs"]])
+datos[["gear"]] <- factor(datos[["gear"]])
+datos[["carb"]] <- factor(datos[["carb"]])
+
+```
+
+
+
+```{r}
+
+# 3. Separar los datos en conjuntos de entrenamiento y prueba
+set.seed(117)  # Fijar la semilla para reproducibilidad
+n <- nrow(datos)
+n_entrenamiento <- floor(0.8 * n)  # 80% de los datos para entrenamiento
+muestra <- sample.int(n = n, size = n_entrenamiento, replace = FALSE)
+entrenamiento <- datos[muestra, ]  # Datos de entrenamiento
+prueba <- datos[-muestra, ]        # Datos de prueba
+```
+
+```{r}
+# 4. Ajustar modelos nulo y completo
+nulo <- glm(am ~ 1, family = binomial(link = "logit"), data = entrenamiento)  # Modelo nulo (sin predictores)
+completo <- glm(am ~ ., family = binomial(link = "logit"), data = entrenamiento)  # Modelo completo (con todos los predictores)
+
+# 5. Ajustar el mejor modelo usando regresión escalonada
+mejor <- step(nulo, scope = list(lower = nulo, upper = completo), direction = "both", trace = 0)
+
+
+
+cat("Modelo con regresión escalonada\n")
+print(summary(mejor))  # Mostrar resumen del mejor modelo
+```
+como se puede apreciar en el modelo, este es sumamente eficaz, teniedno un AIC de solo 6, lo cual es buenisimo, pero puede indicar que existe sobreajuste en el modelo, por lo que se debe tener cuidado con este modelo.
+
+```{r}
+
+# 6. Confirmar si el mejor modelo genera errores de convergencia
+mejor <- glm(formula = am ~ wt + hp, family = binomial(link = "logit"), data = entrenamiento)
+
+# Mostrar comparación con el modelo nulo
+cat("Comparación con el modelo nulo\n")
+print(anova(nulo, mejor, test = "LRT"))
+
+```
+como se puede apreciar en el modelo 2, posee una resid.dev (esto es una desviacion residual, osea la desviacion que no explica el modelo) de 0, lo cual significa que el modelo predice perfectamente la variable solicitada, spoiler esto es un caso raro que puede indicar sobre ajuste o que el modelo es perfecto, pero en la vida real no es asi, por lo que se debe tener cuidado con este modelo, tambien puede indicar una colinealidad entre las variables.
+```{r}
+# 7. Verificar multicolinealidad en el modelo completo
+vifs_completo <- vif(completo)  # Calcular VIF (Factor de Inflación de la Varianza)
+cat("\n")
+cat("Multicolinealidad modelo completo\n")
+cat("VIF:\n")
+print(vifs_completo)  # Imprimir los VIFs para todos los predictores
+cat("\nVIF promedio: ")
+print(mean(vifs_completo))  # Calcular y mostrar el VIF promedio
+
+cat("\n----\n")
+
+```
+el GVIF es lo que indica la colinealidad, uno de mas de 10 significa una colinealidad alta con algun otro predictor.
+```{r}
+
+# 8. Realizar pasos adicionales en la selección de variables
+cat("Primer paso\n")
+cat("------\n")
+print(add1(nulo, scope = completo))  # Ver el primer paso de la adición de variables
+
+# Agregar la variable 'wt' al modelo nulo
+modelo_1 <- update(nulo, . ~ . + wt)  # Modelo actualizado con la variable 'wt'
+
+# Descartar las variables hp, qsec y carb del modelo completo
+completo <- update(completo, . ~ . - hp - qsec - carb)  # Modelo simplificado
+
+# Ver el siguiente paso en la selección de variables
+cat("Segundo paso\n")
+cat("------\n")
+print(add1(modelo_1, scope = completo))
+
+# Agregar la variable 'mpg' al modelo
+modelo_2 <- update(modelo_1, . ~ . + mpg)
+```
+
+```{r}
+
+# 9. Descartar más variables y continuar la selección
+# Descartar las variables drat y gear del modelo completo
+completo <- update(completo, . ~ . - disp - drat - gear)  # Modelo final
+
+# Ver el tercer paso en la selección de variables
+cat("Tercer paso\n")
+cat("---------\n")
+print(add1(modelo_2, scope = completo))
+
+# 10. Comparar los modelos obtenidos usando el Test de Razón de Verosimilitud
+cat("\n")
+cat("Likelihood Ratio Test para los modelos\n")
+cat("------\n")
+print(anova(nulo, modelo_1, modelo_2, test = "LRT"))
+
+# 11. Verificar multicolinealidad en el modelo_2
+vifs_2 <- vif(modelo_2)
+cat("\n")
+cat("Verificación de colinealidad\n")
+cat("VIF:\n")
+print(vifs_2)  # Imprimir los VIFs para el modelo final
+
+```
+
+```{r}
+# Imprimir el VIF promedio
+cat("\n")
+cat("VIF promedio: ")
+print(mean(vifs_2))  # Promedio de los VIFs para el modelo_2
+
+# Verificar linealidad con los predictores
+datos_lin_w <- entrenamiento %>%
+  select(all_of(c("wt", "mpg"))) %>%
+  mutate(Logit = psych::logit(fitted(modelo_2)))  # Transformar las predicciones a la escala logit
+
+datos_lin_l <- pivot_longer(datos_lin_w, c(wt, mpg), names_to = "Predictor", values_to = "Valor")
+
+# Graficar la linealidad de los predictores
+p_1 <- ggscatter(datos_lin_l, x = "Logit", y = "Valor", ylab = "Valor del predictor") +
+  geom_smooth(method = "lm", formula = y ~ x) +
+  theme_pubr() +
+  facet_wrap(~ Predictor, scales = "free_y") +
+  geom_label_repel(aes(label = round(Valor, 2)), box.padding = 0.35, point.padding = 0.5, segment.color = 'grey50')
+
+print(p_1)
+
+
+```
+
+```{r}
+
+# Verificar independencia de los residuos
+cat("\n")
+cat("Verificación de independencia de los residuos\n")
+cat("Resultado del Durbin-Watson Test:\n")
+print(durbinWatsonTest(modelo_2))  # Prueba Durbin-Watson para independencia de residuos
+
+# Verificar normalidad de los residuos
+p_2 <- autoplot(modelo_2, which = 2, label.colour = "blue") +
+  theme_pubr()
+
+print(p_2)
+
+# Revisar posibles casos influyentes
+estad_inf <- influence.measures(modelo_2)
+estad_inf$infmat <- round(estad_inf$infmat, 3)
+
+cat("\n")
+cat("Casos sospechosos de apalancamiento\n")
+print(estad_inf)  # Información sobre casos influyentes en el modelo
+
+```
+
+ahora se probara el modelo 2 con datos que no ha visto
+```{r}
+# 12. Probar el modelo con datos de prueba
+predicciones <- predict(modelo_2, newdata = prueba, type = "response")  # Predecir la variable 'am' en los datos de prueba
+prueba$prediccion <- ifelse(predicciones > 0.5, "manual", "automático")  # Asignar las predicciones a la variable 'prediccion'
+
+# Calcular la matriz de confusión
+  
+confusion <- table(prueba$am, prueba$prediccion)  # Matriz de confusión
+cat("\n")
+cat("Matriz de confusión\n")
+print(confusion)  # Mostrar la matriz de confusión
+
+# Calcular la precisión del modelo
+precision <- sum(diag(confusion)) / sum(confusion)  # Precisión del modelo
+cat("\n")
+cat("Precisión del modelo: ")
+print(precision)  # Mostrar la precisión del modelo
+```
+
